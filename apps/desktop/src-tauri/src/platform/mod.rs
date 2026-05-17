@@ -1,0 +1,125 @@
+use std::sync::Arc;
+
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+#[serde(rename_all = "kebab-case")]
+pub enum NativeSetupResult {
+    Success,
+    RequireRestart,
+    Failed,
+}
+
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+#[serde(rename_all = "kebab-case")]
+pub enum NativeSetupStatus {
+    Ready,
+    NeedsSetup,
+    NeedsRestart,
+}
+
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+#[serde(rename_all = "kebab-case")]
+pub enum PasteKeybindSupport {
+    Disabled,
+    PerApp,
+    Global,
+}
+
+#[cfg(target_os = "macos")]
+pub mod macos;
+#[cfg(target_os = "macos")]
+pub use macos::accessibility;
+#[cfg(target_os = "macos")]
+pub use macos::input;
+#[cfg(target_os = "macos")]
+pub use macos::monitor;
+#[cfg(target_os = "macos")]
+pub use macos::permissions;
+#[cfg(target_os = "macos")]
+pub use macos::position;
+#[cfg(target_os = "macos")]
+pub use macos::window;
+
+#[cfg(target_os = "macos")]
+pub use macos::compositor;
+#[cfg(target_os = "macos")]
+pub use macos::init;
+#[cfg(target_os = "macos")]
+pub use macos::keyboard_language;
+
+#[cfg(target_os = "macos")]
+pub use macos::get_hotkey_strategy;
+
+#[cfg(target_os = "macos")]
+pub use macos::supports_app_detection;
+
+#[cfg(target_os = "macos")]
+pub use macos::supports_paste_keybinds;
+
+#[cfg(target_os = "macos")]
+pub use macos::overlay;
+
+#[cfg(target_os = "macos")]
+pub use macos::volume;
+
+pub fn find_pid_by_window_title(title_substring: &str) -> Option<i32> {
+    let _ = title_substring;
+    None
+}
+
+pub mod app_info;
+
+pub mod audio;
+
+pub mod paste_keybind;
+
+#[cfg(desktop)]
+pub mod keyboard;
+
+pub enum SavedClipboard {
+    Text(String),
+    Image(arboard::ImageData<'static>),
+    Empty,
+}
+
+impl SavedClipboard {
+    pub fn save(clipboard: &mut arboard::Clipboard) -> Self {
+        if let Ok(text) = clipboard.get_text() {
+            return Self::Text(text);
+        }
+        if let Ok(image) = clipboard.get_image() {
+            return Self::Image(image);
+        }
+        Self::Empty
+    }
+
+    pub fn restore(self) {
+        if let Ok(mut cb) = arboard::Clipboard::new() {
+            match self {
+                Self::Text(text) => {
+                    let _ = cb.set_text(text);
+                }
+                Self::Image(image) => {
+                    let _ = cb.set_image(image);
+                }
+                Self::Empty => {}
+            }
+        }
+    }
+}
+
+pub type LevelCallback = Arc<dyn Fn(Vec<f32>) + Send + Sync>;
+pub type ChunkCallback = Arc<dyn Fn(Vec<f32>) + Send + Sync>;
+
+pub trait Recorder: Send + Sync {
+    fn start(
+        &self,
+        level_callback: Option<LevelCallback>,
+        chunk_callback: Option<ChunkCallback>,
+    ) -> Result<(), Box<dyn std::error::Error>>;
+    fn stop(&self) -> Result<crate::domain::RecordingResult, Box<dyn std::error::Error>>;
+    fn set_preferred_input_device(&self, _name: Option<String>) {}
+    fn clear_device_cache(&self) {}
+    fn current_sample_rate(&self) -> Option<u32> {
+        None
+    }
+}
