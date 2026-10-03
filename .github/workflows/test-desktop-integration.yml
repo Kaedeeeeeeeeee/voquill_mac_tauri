@@ -19,7 +19,7 @@ on:
 jobs:
   integration-tests:
     name: Desktop Integration Tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-24"]' || '["ubuntu-latest"]') }}
     # Only run on push to main OR on PRs from the same repo (not forks)
     if: |
       github.event_name == 'push' ||
@@ -35,7 +35,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies

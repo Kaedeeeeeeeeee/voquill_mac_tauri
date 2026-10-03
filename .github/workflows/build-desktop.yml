@@ -13,7 +13,7 @@ on:
 jobs:
   build:
     name: Build Desktop (${{ matrix.label }})
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && startsWith(matrix.os, 'ubuntu') && !endsWith(matrix.os, '-arm')) && format('["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-{0}"]', matrix.os == 'ubuntu-22.04' && '22' || '24') || format('["{0}"]', matrix.os)) }}
     timeout-minutes: 35
     strategy:
       fail-fast: false
@@ -54,7 +54,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup Bun
@@ -79,6 +79,7 @@ jobs:
           workspaces: |
             apps/desktop/src-tauri -> target
 
+        if: (success()) && runner.environment != 'self-hosted'
       - name: Set Windows-only build environment
         if: matrix.os == 'windows-latest'
         shell: pwsh
@@ -154,3 +155,21 @@ jobs:
             ${{ matrix.bundle_dir }}/**/*.AppImage
           if-no-files-found: warn
           retention-days: 7
+        if: (success()) && runner.environment != 'self-hosted'
+      - name: Save artifact on ubuntu-zhang
+        if: (success()) && runner.environment == 'self-hosted'
+        shell: bash
+        env:
+          CI_ARTIFACT_NAME: voquill-${{ matrix.tauri_platform }}
+          CI_ARTIFACT_PATHS: |
+            ${{ matrix.bundle_dir }}/**/*.dmg
+            ${{ matrix.bundle_dir }}/**/*.app.tar.gz
+            ${{ matrix.bundle_dir }}/**/*.msi
+            ${{ matrix.bundle_dir }}/**/*.nsis.zip
+            ${{ matrix.bundle_dir }}/**/*.exe
+            ${{ matrix.bundle_dir }}/**/*.deb
+            ${{ matrix.bundle_dir }}/**/*.AppImage
+          CI_ARTIFACT_NO_FILES: warn
+          CI_ARTIFACT_RETENTION: '7'
+          CI_ARTIFACT_INCLUDE_HIDDEN: 'false'
+        run: python3 /opt/ci/store_artifact.py

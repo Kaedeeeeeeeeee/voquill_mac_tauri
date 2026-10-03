@@ -18,7 +18,7 @@ on:
 jobs:
   integration-tests:
     name: Rust Transcription Integration Tests (${{ matrix.label }})
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && startsWith(matrix.os, 'ubuntu') && !endsWith(matrix.os, '-arm')) && format('["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-{0}"]', matrix.os == 'ubuntu-22.04' && '22' || '24') || format('["{0}"]', matrix.os)) }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -45,6 +45,7 @@ jobs:
           workspaces: |
             packages/rust_transcription -> packages/rust_transcription/target
 
+        if: (success()) && runner.environment != 'self-hosted'
       - name: Install system dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
