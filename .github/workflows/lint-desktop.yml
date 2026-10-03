@@ -11,7 +11,7 @@ on:
 jobs:
   lint:
     name: Lint Desktop (${{ matrix.label }})
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && startsWith(matrix.os, 'ubuntu') && !endsWith(matrix.os, '-arm')) && format('["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-{0}"]', matrix.os == 'ubuntu-22.04' && '22' || '24') || format('["{0}"]', matrix.os)) }}
     strategy:
       fail-fast: false
       matrix:
@@ -31,7 +31,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: pnpm-lock.yaml
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -42,6 +42,7 @@ jobs:
         with:
           workspaces: |
             apps/desktop/src-tauri -> target
+        if: (success()) && runner.environment != 'self-hosted'
       - name: Install system dependencies (Linux)
         if: matrix.os == 'ubuntu-22.04'
         run: |

@@ -16,7 +16,7 @@ on:
 jobs:
   metadata:
     name: Determine release metadata
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-24"]' || '["ubuntu-latest"]') }}
     permissions:
       contents: write
     outputs:
@@ -250,7 +250,7 @@ jobs:
   build:
     name: Build ${{ matrix.label }}
     needs: metadata
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && startsWith(matrix.os, 'ubuntu') && !endsWith(matrix.os, '-arm')) && format('["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-{0}"]', matrix.os == 'ubuntu-22.04' && '22' || '24') || format('["{0}"]', matrix.os)) }}
     timeout-minutes: 60
     permissions:
       contents: write
@@ -318,7 +318,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup Bun
@@ -347,6 +347,7 @@ jobs:
             apps/desktop/src-tauri -> ${{ matrix.os == 'windows-latest' && 'D:\cargo' || 'target' }}
           key: ${{ matrix.os }}-native-off-v2
 
+        if: (success()) && runner.environment != 'self-hosted'
       - name: Set Windows sidecar build environment
         if: matrix.os == 'windows-latest'
         shell: pwsh
@@ -876,7 +877,7 @@ jobs:
     name: Retry failed builds
     needs: [metadata, build]
     if: failure() && fromJSON(github.run_attempt) < 3
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-24"]' || '["ubuntu-latest"]') }}
     permissions:
       actions: write
     steps:
@@ -888,7 +889,7 @@ jobs:
   update-channel:
     name: Update channel release
     needs: [metadata, build]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-24"]' || '["ubuntu-latest"]') }}
     permissions:
       contents: write
     env:
@@ -928,7 +929,7 @@ jobs:
   publish-apt:
     name: Publish to APT repository
     needs: [metadata, build]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-24"]' || '["ubuntu-latest"]') }}
     if: needs.metadata.outputs.release_env != 'enterprise' && needs.metadata.outputs.release_env != 'enterprise-dev'
     permissions:
       contents: read
@@ -1003,7 +1004,7 @@ jobs:
   publish-rpm:
     name: Publish to RPM repository
     needs: [metadata, build]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-24"]' || '["ubuntu-latest"]') }}
     if: needs.metadata.outputs.release_env != 'enterprise' && needs.metadata.outputs.release_env != 'enterprise-dev'
     permissions:
       contents: read
@@ -1081,7 +1082,7 @@ jobs:
   publish-brew:
     name: Publish to Homebrew tap
     needs: [metadata, build]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-24"]' || '["ubuntu-latest"]') }}
     if: needs.metadata.outputs.release_env != 'enterprise' && needs.metadata.outputs.release_env != 'enterprise-dev'
     permissions:
       contents: read

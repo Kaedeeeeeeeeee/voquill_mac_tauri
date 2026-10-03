@@ -30,7 +30,7 @@ on:
 jobs:
   metadata:
     name: Determine release metadata
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-24"]' || '["ubuntu-latest"]') }}
     permissions:
       contents: write
     outputs:
@@ -169,7 +169,7 @@ jobs:
   build:
     name: Build ${{ matrix.label }}
     needs: metadata
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && startsWith(matrix.os, 'ubuntu') && !endsWith(matrix.os, '-arm')) && format('["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-{0}"]', matrix.os == 'ubuntu-22.04' && '22' || '24') || format('["{0}"]', matrix.os)) }}
     timeout-minutes: 30
     permissions:
       contents: write
@@ -224,6 +224,7 @@ jobs:
           workspaces: cli -> target
           key: cli-${{ matrix.target }}
 
+        if: (success()) && runner.environment != 'self-hosted'
       - name: Pin crate version (unix)
         if: runner.os != 'Windows'
         shell: bash
@@ -349,7 +350,7 @@ jobs:
   publish-apt:
     name: Publish to APT repository
     needs: [metadata, build]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-24"]' || '["ubuntu-latest"]') }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RELEASE_TAG: ${{ needs.metadata.outputs.tag_name }}
@@ -430,7 +431,7 @@ jobs:
   publish-rpm:
     name: Publish to RPM repository
     needs: [metadata, build]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-24"]' || '["ubuntu-latest"]') }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RELEASE_TAG: ${{ needs.metadata.outputs.tag_name }}
@@ -508,7 +509,7 @@ jobs:
   publish-brew:
     name: Publish to Homebrew tap
     needs: [metadata, build]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-24"]' || '["ubuntu-latest"]') }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RELEASE_TAG: ${{ needs.metadata.outputs.tag_name }}

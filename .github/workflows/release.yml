@@ -27,7 +27,7 @@ permissions:
 jobs:
   detect:
     name: Detect changed folders
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-24"]' || '["ubuntu-latest"]') }}
     outputs:
       channel: ${{ steps.env.outputs.channel }}
       cli: ${{ steps.filter.outputs.cli }}
@@ -140,7 +140,7 @@ jobs:
     name: Notify Google Chat
     needs: [detect, cli, desktop, desktop-enterprise-dev, docs, enterprise-admin, enterprise-gateway]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","linux","x64","ubuntu-zhang","ci-ubuntu-24"]' || '["ubuntu-latest"]') }}
     steps:
       - name: Post release summary
         env:
